@@ -1,9 +1,11 @@
 package container_test
 
 import (
-	"github.com/golobby/container"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/atrico-go/container"
 )
 
 type Shape interface {
@@ -35,7 +37,7 @@ func (m MySQL) Connect() bool {
 
 func TestSingletonItShouldMakeAnInstanceOfTheAbstraction(t *testing.T) {
 	area := 5
-	
+
 	c := container.NewContainer()
 	c.Singleton(func() Shape {
 		return &Circle{a: area}

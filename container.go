@@ -60,8 +60,7 @@ func (c *container) Make(receiver interface{}) {
 	if receiverTypeOf.Kind() == reflect.Ptr {
 		abstraction := receiverTypeOf.Elem()
 
-		if concrete, ok := (*c)[abstraction]; ok {
-			instance := concrete.resolve(c)
+		if instance := c.resolve(abstraction); instance != nil {
 			reflect.ValueOf(receiver).Elem().Set(reflect.ValueOf(instance))
 			return
 		}
@@ -84,7 +83,7 @@ func (c *container) invoke(function interface{}) interface{} {
 	return reflect.ValueOf(function).Call(c.arguments(function))[0].Interface()
 }
 
-// bind will map an abstraction to a concrete and set instance if it's a singleton binding.
+// bind will map an abstraction to a concrete.
 func (c *container) bind(resolver interface{}, singleton bool) {
 	resolverTypeOf := reflect.TypeOf(resolver)
 	if resolverTypeOf.Kind() != reflect.Func {
@@ -92,18 +91,13 @@ func (c *container) bind(resolver interface{}, singleton bool) {
 	}
 
 	for i := 0; i < resolverTypeOf.NumOut(); i++ {
-		var instance interface{}
-		if singleton {
-			instance = c.invoke(resolver)
-		}
-
 		(*c)[resolverTypeOf.Out(i)] = binding{
 			resolver: resolver,
-			instance: instance,
+			instance: nil,
+			singleton: singleton,
 		}
 	}
 }
-
 
 // arguments will return resolved arguments of the given function.
 func (c *container) arguments(function interface{}) []reflect.Value {
@@ -113,36 +107,37 @@ func (c *container) arguments(function interface{}) []reflect.Value {
 
 	for i := 0; i < argumentsCount; i++ {
 		abstraction := functionTypeOf.In(i)
-
-		var instance interface{}
-
-		if concrete, ok := (*c)[abstraction]; ok {
-			instance = concrete.resolve(c)
-		} else {
+		instance := c.resolve(abstraction)
+		if  instance == nil {
 			panic("no concrete found for the abstraction: " + abstraction.String())
 		}
-
 		arguments[i] = reflect.ValueOf(instance)
 	}
 
 	return arguments
 }
 
+// resolve will return the concrete of related abstraction.
+func (c *container) resolve(abstraction reflect.Type) interface{} {
+	if b, ok := (*c)[abstraction]; ok {
+		// Return singleton if already resolved
+		if b.instance != nil {
+			return b.instance
+		}
+		instance := c.invoke(b.resolver)
+		if b.singleton {
+			b.instance = instance
+			(*c)[abstraction] = b
+		}
+		return instance
+	}
+	return nil
+}
 
 // binding keeps a binding resolver and instance (for singleton bindings).
 type binding struct {
-	resolver interface{} // resolver function
-	instance interface{} // instance stored for singleton bindings
+	resolver  interface{} // resolver function
+	instance  interface{} // instance stored for singleton bindings (on first resolve)
+	singleton bool
 }
-
-// resolve will return the concrete of related abstraction.
-func (b binding) resolve(c *container) interface{} {
-	if b.instance != nil {
-		return b.instance
-	}
-
-	return c.invoke(b.resolver)
-}
-
-
 

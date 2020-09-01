@@ -6,6 +6,7 @@
 
 # Container
 A lightweight yet powerful IoC container for Go projects. It provides a simple, fluent and easy-to-use interface to make dependency injection in GoLang easier.
+Atrico fork adds "lazy" creation of singletons and Container as an interface (not a global)
 
 ## Documentation
 
@@ -16,7 +17,7 @@ It requires Go `v1.11` or newer versions.
 To install this package, run the following command in the root of your project.
 
 ```bash
-go get github.com/golobby/container
+go get github.com/atrico-go/container
 ```
 
 ### Introduction
@@ -25,6 +26,11 @@ Binding is a process of introducing an IoC container that which concrete (implem
 In singleton binding, the container provides an instance once and returns it for each request. 
 In transient binding, the container always returns a brand new instance for each request.
 After the binding process, you can ask the IoC container to get the appropriate implementation of the abstraction that your code depends on. In this case, your code depends on abstractions, not implementations.
+### Create container
+
+```go
+c := container.NewContainer()
+```
 
 ### Binding
 
@@ -33,7 +39,7 @@ After the binding process, you can ask the IoC container to get the appropriate 
 Singleton binding using Container:
 
 ```go
-container.Singleton(func() Abstraction {
+c.Singleton(func() Abstraction {
   return Implementation
 })
 ```
@@ -43,7 +49,7 @@ It takes a resolver function which its return type is the abstraction and the fu
 Example for a singleton binding:
 
 ```go
-container.Singleton(func() Database {
+c.Singleton(func() Database {
   return &MySQL{}
 })
 ```
@@ -55,7 +61,7 @@ Transient binding is also similar to singleton binding.
 Example for a transient binding:
 
 ```go
-container.Transient(func() Shape {
+c.Transient(func() Shape {
   return &Rectangle{}
 })
 ```
@@ -70,7 +76,7 @@ One way to get the appropriate implementation you need is to declare an instance
 
 ```go
 var a Abstraction
-container.Make(&a)
+c.Make(&a)
 // "a" will be implementation of the Abstraction
 ```
 
@@ -78,7 +84,7 @@ Example:
 
 ```go
 var m Mailer
-container.Make(&m)
+c.Make(&m)
 m.Send("info@miladrahimi.com", "Hello Milad!")
 ```
 
@@ -88,7 +94,7 @@ Another way to resolve the dependencies is by using a function (receiver) that i
 need. Container will invoke the function and pass the related implementations for each abstraction.
 
 ```go
-container.Make(func(a Abstraction) {
+c.Make(func(a Abstraction) {
   // "a" will be implementation of the Abstraction
 })
 ```
@@ -96,7 +102,7 @@ container.Make(func(a Abstraction) {
 Example:
 
 ```go
-container.Make(func(db Database) {
+c.Make(func(db Database) {
   // "db" will be the instance of MySQL
   db.Query("...")
 })
@@ -105,7 +111,7 @@ container.Make(func(db Database) {
 You can also resolve multiple abstractions this way:
 
 ```go
-container.Make(func(db Database, s Shape) {
+c.Make(func(db Database, s Shape) {
   db.Query("...")
   s.Area()
 })
@@ -117,12 +123,12 @@ You can also resolve a dependency at the binding time in your resolver function 
 
 ```go
 // Bind Config to JsonConfig
-container.Singleton(func() Config {
+c.Singleton(func() Config {
     return &JsonConfig{...}
 })
 
 // Bind Database to MySQL
-container.Singleton(func(c Config) Database {
+c.Singleton(func(c Config) Database {
     // "c" will be the instance of JsonConfig
     return &MySQL{
         Username: c.Get("DB_USERNAME"),
@@ -145,3 +151,4 @@ like main and init functions.
 ## License
 
 GoLobby Container is released under the [MIT License](http://opensource.org/licenses/mit-license.php).
+Atrico-go container follows this license
