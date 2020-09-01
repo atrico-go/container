@@ -35,29 +35,31 @@ func (m MySQL) Connect() bool {
 
 func TestSingletonItShouldMakeAnInstanceOfTheAbstraction(t *testing.T) {
 	area := 5
-
-	container.Singleton(func() Shape {
+	
+	c := container.NewContainer()
+	c.Singleton(func() Shape {
 		return &Circle{a: area}
 	})
 
-	container.Make(func(s Shape) {
+	c.Make(func(s Shape) {
 		a := s.GetArea()
 		assert.Equal(t, area, a)
 	})
 }
 
 func TestSingletonItShouldMakeSameObjectEachMake(t *testing.T) {
-	container.Singleton(func() Shape {
+	c := container.NewContainer()
+	c.Singleton(func() Shape {
 		return &Circle{a: 5}
 	})
 
 	area := 6
 
-	container.Make(func(s1 Shape) {
+	c.Make(func(s1 Shape) {
 		s1.SetArea(area)
 	})
 
-	container.Make(func(s2 Shape) {
+	c.Make(func(s2 Shape) {
 		a := s2.GetArea()
 		assert.Equal(t, a, area)
 	})
@@ -65,18 +67,20 @@ func TestSingletonItShouldMakeSameObjectEachMake(t *testing.T) {
 
 func TestSingletonWithNonFunctionResolverItShouldPanic(t *testing.T) {
 	value := "the resolver must be a function"
+	c := container.NewContainer()
 	assert.PanicsWithValue(t, value, func() {
-		container.Singleton("STRING!")
+		c.Singleton("STRING!")
 	}, "Expected panic")
 }
 
 func TestSingletonItShouldResolveResolverArguments(t *testing.T) {
 	area := 5
-	container.Singleton(func() Shape {
+	c := container.NewContainer()
+	c.Singleton(func() Shape {
 		return &Circle{a: area}
 	})
 
-	container.Singleton(func(s Shape) Database {
+	c.Singleton(func(s Shape) Database {
 		assert.Equal(t, s.GetArea(), area)
 		return &MySQL{}
 	})
@@ -85,15 +89,16 @@ func TestSingletonItShouldResolveResolverArguments(t *testing.T) {
 func TestTransientItShouldMakeDifferentObjectsOnMake(t *testing.T) {
 	area := 5
 
-	container.Transient(func() Shape {
+	c := container.NewContainer()
+	c.Transient(func() Shape {
 		return &Circle{a: area}
 	})
 
-	container.Make(func(s1 Shape) {
+	c.Make(func(s1 Shape) {
 		s1.SetArea(6)
 	})
 
-	container.Make(func(s2 Shape) {
+	c.Make(func(s2 Shape) {
 		a := s2.GetArea()
 		assert.Equal(t, a, area)
 	})
@@ -102,22 +107,24 @@ func TestTransientItShouldMakeDifferentObjectsOnMake(t *testing.T) {
 func TestTransientItShouldMakeAnInstanceOfTheAbstraction(t *testing.T) {
 	area := 5
 
-	container.Transient(func() Shape {
+	c := container.NewContainer()
+	c.Transient(func() Shape {
 		return &Circle{a: area}
 	})
 
-	container.Make(func(s Shape) {
+	c.Make(func(s Shape) {
 		a := s.GetArea()
 		assert.Equal(t, a, area)
 	})
 }
 
 func TestMakeWithSingleInputAndCallback(t *testing.T) {
-	container.Singleton(func() Shape {
+	c := container.NewContainer()
+	c.Singleton(func() Shape {
 		return &Circle{a: 5}
 	})
 
-	container.Make(func(s Shape) {
+	c.Make(func(s Shape) {
 		if _, ok := s.(*Circle); !ok {
 			t.Error("Expected Circle")
 		}
@@ -125,15 +132,16 @@ func TestMakeWithSingleInputAndCallback(t *testing.T) {
 }
 
 func TestMakeWithMultipleInputsAndCallback(t *testing.T) {
-	container.Singleton(func() Shape {
+	c := container.NewContainer()
+	c.Singleton(func() Shape {
 		return &Circle{a: 5}
 	})
 
-	container.Singleton(func() Database {
+	c.Singleton(func() Database {
 		return &MySQL{}
 	})
 
-	container.Make(func(s Shape, m Database) {
+	c.Make(func(s Shape, m Database) {
 		if _, ok := s.(*Circle); !ok {
 			t.Error("Expected Circle")
 		}
@@ -145,13 +153,14 @@ func TestMakeWithMultipleInputsAndCallback(t *testing.T) {
 }
 
 func TestMakeWithSingleInputAndReference(t *testing.T) {
-	container.Singleton(func() Shape {
+	c := container.NewContainer()
+	c.Singleton(func() Shape {
 		return &Circle{a: 5}
 	})
 
 	var s Shape
 
-	container.Make(&s)
+	c.Make(&s)
 
 	if _, ok := s.(*Circle); !ok {
 		t.Error("Expected Circle")
@@ -159,11 +168,12 @@ func TestMakeWithSingleInputAndReference(t *testing.T) {
 }
 
 func TestMakeWithMultipleInputsAndReference(t *testing.T) {
-	container.Singleton(func() Shape {
+	c := container.NewContainer()
+	c.Singleton(func() Shape {
 		return &Circle{a: 5}
 	})
 
-	container.Singleton(func() Database {
+	c.Singleton(func() Database {
 		return &MySQL{}
 	})
 
@@ -172,8 +182,8 @@ func TestMakeWithMultipleInputsAndReference(t *testing.T) {
 		d Database
 	)
 
-	container.Make(&s)
-	container.Make(&d)
+	c.Make(&s)
+	c.Make(&d)
 
 	if _, ok := s.(*Circle); !ok {
 		t.Error("Expected Circle")
@@ -186,35 +196,39 @@ func TestMakeWithMultipleInputsAndReference(t *testing.T) {
 
 func TestMakeWithUnsupportedReceiver(t *testing.T) {
 	value := "the receiver must be either a reference or a callback"
+	c := container.NewContainer()
 	assert.PanicsWithValue(t, value, func() {
-		container.Make("STRING!")
+		c.Make("STRING!")
 	}, "Expected panic")
 }
 
 func TestMakeWithNonReference(t *testing.T) {
 	value := "cannot detect type of the receiver, make sure your are passing reference of the object"
+	c := container.NewContainer()
 	assert.PanicsWithValue(t, value, func() {
 		var s Shape
-		container.Make(s)
+		c.Make(s)
 	}, "Expected panic")
 }
 
 func TestMakeWithUnboundedAbstraction(t *testing.T) {
 	value := "no concrete found for the abstraction container_test.Shape"
+	c := container.NewContainer()
 	assert.PanicsWithValue(t, value, func() {
 		var s Shape
-		container.Reset()
-		container.Make(&s)
+		c.Reset()
+		c.Make(&s)
 	}, "Expected panic")
 }
 
 func TestMakeWithCallbackThatHasAUnboundedAbstraction(t *testing.T) {
 	value := "no concrete found for the abstraction: container_test.Database"
+	c := container.NewContainer()
 	assert.PanicsWithValue(t, value, func() {
-		container.Reset()
-		container.Singleton(func() Shape {
+		c.Reset()
+		c.Singleton(func() Shape {
 			return &Circle{}
 		})
-		container.Make(func(s Shape, d Database) {})
+		c.Make(func(s Shape, d Database) {})
 	}, "Expected panic")
 }
